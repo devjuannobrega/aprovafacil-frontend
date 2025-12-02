@@ -36,31 +36,31 @@ const HeroSection = () => {
       </div>
 
       {/* Content */}
-      <div className="container relative z-10 pt-24 pb-32 md:pt-32 md:pb-40">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+      <div className="container relative z-10 pt-20 pb-28 sm:pt-24 sm:pb-32 md:pt-32 md:pb-40">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           {/* Left Content */}
-          <div className="text-center lg:text-left">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 text-primary-foreground text-sm font-medium mb-6 animate-fade-in">
-              <CheckCircle className="w-4 h-4" />
+          <div className="text-center lg:text-left px-2 sm:px-0">
+            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20 text-primary-foreground text-xs sm:text-sm font-medium mb-4 sm:mb-6 animate-fade-in">
+              <CheckCircle className="w-4 h-4 flex-shrink-0" />
               <span>+10.000 clientes satisfeitos</span>
             </div>
 
-            <h1 className="font-poppins font-bold text-4xl md:text-5xl lg:text-6xl text-primary-foreground leading-tight mb-6 animate-slide-up">
+            <h1 className="font-poppins font-bold text-3xl sm:text-4xl md:text-5xl lg:text-6xl text-primary-foreground leading-tight mb-4 sm:mb-6 animate-slide-up">
               Limpe Seu Nome e{" "}
               <span className="text-primary-light">Recupere Seu Crédito</span>{" "}
               Hoje Mesmo!
             </h1>
 
-            <p className="text-primary-foreground/80 text-lg md:text-xl mb-8 max-w-xl mx-auto lg:mx-0 animate-slide-up" style={{ animationDelay: "0.1s" }}>
+            <p className="text-primary-foreground/80 text-base sm:text-lg md:text-xl mb-6 sm:mb-8 max-w-xl mx-auto lg:mx-0 animate-slide-up" style={{ animationDelay: "0.1s" }}>
               Serviço rápido, seguro e 100% online. Resolva suas pendências e reconquiste seu poder de compra.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-slide-up" style={{ animationDelay: "0.2s" }}>
-              <Button variant="hero" size="xl" onClick={scrollToPayment}>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start animate-slide-up" style={{ animationDelay: "0.2s" }}>
+              <Button variant="hero" size="xl" onClick={scrollToPayment} className="min-h-[52px] text-base">
                 Aproveite Agora
                 <ArrowRight className="w-5 h-5" />
               </Button>
-              <Button variant="hero-outline" size="xl" asChild>
+              <Button variant="hero-outline" size="xl" asChild className="min-h-[52px] text-base">
                 <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
                   <MessageCircle className="w-5 h-5" />
                   Fale com Consultor
@@ -69,15 +69,15 @@ const HeroSection = () => {
             </div>
 
             {/* Trust Badges */}
-            <div className="flex flex-wrap gap-6 justify-center lg:justify-start mt-10 animate-fade-in" style={{ animationDelay: "0.3s" }}>
+            <div className="flex flex-wrap gap-4 sm:gap-6 justify-center lg:justify-start mt-8 sm:mt-10 animate-fade-in" style={{ animationDelay: "0.3s" }}>
               {[
                 { icon: Shield, label: "100% Seguro" },
                 { icon: TrendingUp, label: "Score Recuperado" },
                 { icon: CreditCard, label: "Crédito Liberado" },
               ].map((badge, index) => (
                 <div key={index} className="flex items-center gap-2 text-primary-foreground/70">
-                  <badge.icon className="w-5 h-5" />
-                  <span className="text-sm font-medium">{badge.label}</span>
+                  <badge.icon className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                  <span className="text-xs sm:text-sm font-medium">{badge.label}</span>
                 </div>
               ))}
             </div>

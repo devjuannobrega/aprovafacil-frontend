@@ -149,6 +149,36 @@
   .animate-scale-in {
     animation: scaleIn 0.5s ease-out forwards;
   }
+
+  /* Reduce animations on mobile for better performance */
+  @media (max-width: 640px) {
+    .animate-float {
+      animation: none;
+    }
+
+    .animate-pulse-slow {
+      animation: none;
+    }
+
+    .animate-slide-up {
+      animation: slideUp 0.4s ease-out forwards;
+    }
+
+    .animate-fade-in {
+      animation: fadeIn 0.5s ease-out forwards;
+    }
+  }
+
+  /* Respect user preference for reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-float,
+    .animate-pulse-slow,
+    .animate-slide-up,
+    .animate-fade-in,
+    .animate-scale-in {
+      animation: none;
+    }
+  }
 }
 
 @keyframes float {

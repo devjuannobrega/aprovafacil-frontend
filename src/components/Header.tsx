@@ -77,17 +77,18 @@ const Header = () => {
         {/* Mobile Menu Button */}
         <button
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className={`md:hidden p-2 rounded-lg transition-colors ${
-            isScrolled ? "text-foreground" : "text-primary-foreground"
+          className={`md:hidden p-3 -mr-2 rounded-xl transition-colors min-w-[48px] min-h-[48px] flex items-center justify-center active:bg-white/10 ${
+            isScrolled ? "text-foreground active:bg-primary/10" : "text-primary-foreground"
           }`}
+          aria-label={isMobileMenuOpen ? "Fechar menu" : "Abrir menu"}
         >
           {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
 
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
-          <div className="absolute top-full left-0 right-0 bg-card shadow-lg md:hidden animate-slide-up">
-            <nav className="flex flex-col p-4 gap-2">
+          <div className="absolute top-full left-0 right-0 bg-card shadow-lg md:hidden animate-slide-up border-t border-border">
+            <nav className="flex flex-col p-4 gap-1">
               {[
                 { label: "Início", id: "hero" },
                 { label: "Serviços", id: "servicos" },
@@ -97,12 +98,12 @@ const Header = () => {
                 <button
                   key={item.id}
                   onClick={() => scrollToSection(item.id)}
-                  className="text-foreground font-medium py-3 px-4 rounded-lg hover:bg-primary-muted transition-colors text-left"
+                  className="text-foreground font-medium min-h-[48px] py-3 px-4 rounded-xl hover:bg-primary-muted active:bg-primary-muted/80 transition-colors text-left flex items-center"
                 >
                   {item.label}
                 </button>
               ))}
-              <Button variant="whatsapp" className="mt-2" asChild>
+              <Button variant="whatsapp" size="lg" className="mt-3 min-h-[48px]" asChild>
                 <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
                   Fale Conosco
                 </a>
