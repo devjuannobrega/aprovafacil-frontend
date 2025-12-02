@@ -1,9 +1,10 @@
 import { Shield, Mail, Phone, MapPin, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const WHATSAPP_LINK = "https://wa.me/5511999999999?text=Olá! Gostaria de saber mais sobre os serviços Limpa Nome.";
+import { useChat } from "@/contexts/ChatContext";
 
 const Footer = () => {
+  const { openChat } = useChat();
+
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
@@ -27,11 +28,9 @@ const Footer = () => {
             <p className="text-primary-dark-foreground/70 mb-4 sm:mb-6 leading-relaxed text-sm sm:text-base">
               Especialistas em regularização de crédito. Ajudamos você a recuperar seu nome e conquistar seus sonhos.
             </p>
-            <Button variant="whatsapp" className="min-h-[44px]" asChild>
-              <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
-                <MessageCircle className="w-5 h-5" />
-                Fale Conosco
-              </a>
+            <Button variant="default" className="min-h-[44px]" onClick={openChat}>
+              <MessageCircle className="w-5 h-5" />
+              Fale Conosco
             </Button>
           </div>
 

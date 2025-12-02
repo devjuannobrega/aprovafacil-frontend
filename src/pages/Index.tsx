@@ -6,8 +6,16 @@ import PricingSection from "@/components/PricingSection";
 import PaymentSection from "@/components/PaymentSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import Footer from "@/components/Footer";
+import ChatAssistant, { ChatButton } from "@/components/ChatAssistant";
+import { useChat } from "@/contexts/ChatContext";
+import { useHealthCheck } from "@/hooks/useHealthCheck";
 
 const Index = () => {
+  const { isOpen, openChat, closeChat } = useChat();
+
+  // Health check ao carregar a página
+  useHealthCheck();
+
   return (
     <>
       <Helmet>
@@ -33,6 +41,10 @@ const Index = () => {
           <TestimonialsSection />
         </main>
         <Footer />
+
+        {/* Chat Assistente */}
+        {!isOpen && <ChatButton onClick={openChat} />}
+        <ChatAssistant isOpen={isOpen} onClose={closeChat} />
       </div>
     </>
   );

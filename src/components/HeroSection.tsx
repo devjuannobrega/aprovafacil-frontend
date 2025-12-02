@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, MessageCircle, CheckCircle, TrendingUp, Shield, CreditCard } from "lucide-react";
-
-const WHATSAPP_LINK = "https://wa.me/5511999999999?text=Olá! Gostaria de saber mais sobre os serviços Limpa Nome.";
+import { useChat } from "@/contexts/ChatContext";
 
 const HeroSection = () => {
+  const { openChat } = useChat();
+
   const scrollToPayment = () => {
     const element = document.getElementById("pagamento");
     if (element) {
@@ -60,11 +61,9 @@ const HeroSection = () => {
                 Aproveite Agora
                 <ArrowRight className="w-5 h-5" />
               </Button>
-              <Button variant="hero-outline" size="xl" asChild className="min-h-[52px] text-base">
-                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
-                  <MessageCircle className="w-5 h-5" />
-                  Fale com Consultor
-                </a>
+              <Button variant="hero-outline" size="xl" className="min-h-[52px] text-base" onClick={openChat}>
+                <MessageCircle className="w-5 h-5" />
+                Fale com Consultor
               </Button>
             </div>
 

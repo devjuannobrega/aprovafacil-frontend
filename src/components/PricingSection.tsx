@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Check, MessageCircle, Star, Zap } from "lucide-react";
-
-const WHATSAPP_LINK = "https://wa.me/5511999999999?text=Olá! Tenho interesse no Plano Completo Limpa Nome.";
+import { useChat } from "@/contexts/ChatContext";
 
 const features = [
   "Suporte completo até a finalização",
@@ -15,6 +14,8 @@ const features = [
 ];
 
 const PricingSection = () => {
+  const { openChat } = useChat();
+
   const scrollToPayment = () => {
     const element = document.getElementById("pagamento");
     if (element) {
@@ -86,11 +87,9 @@ const PricingSection = () => {
                 <Button variant="cta" size="xl" className="flex-1 min-h-[52px] text-base" onClick={scrollToPayment}>
                   Aproveite Agora
                 </Button>
-                <Button variant="whatsapp" size="xl" className="flex-1 min-h-[52px] text-base" asChild>
-                  <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
-                    <MessageCircle className="w-5 h-5" />
-                    Fale com Consultor
-                  </a>
+                <Button variant="outline" size="xl" className="flex-1 min-h-[52px] text-base" onClick={openChat}>
+                  <MessageCircle className="w-5 h-5" />
+                  Fale com Consultor
                 </Button>
               </div>
             </div>

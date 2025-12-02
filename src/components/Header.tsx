@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Shield } from "lucide-react";
-
-const WHATSAPP_LINK = "https://wa.me/5511999999999?text=Olá! Gostaria de saber mais sobre os serviços Limpa Nome.";
+import { Menu, X, Shield, MessageCircle } from "lucide-react";
+import { useChat } from "@/contexts/ChatContext";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { openChat } = useChat();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -22,6 +22,11 @@ const Header = () => {
       element.scrollIntoView({ behavior: "smooth" });
     }
     setIsMobileMenuOpen(false);
+  };
+
+  const handleOpenChat = () => {
+    setIsMobileMenuOpen(false);
+    openChat();
   };
 
   return (
@@ -64,13 +69,12 @@ const Header = () => {
             </button>
           ))}
           <Button
-            variant="whatsapp"
+            variant="default"
             size="sm"
-            asChild
+            onClick={handleOpenChat}
           >
-            <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
-              Fale Conosco
-            </a>
+            <MessageCircle className="w-4 h-4 mr-1" />
+            Fale Conosco
           </Button>
         </nav>
 
@@ -103,10 +107,9 @@ const Header = () => {
                   {item.label}
                 </button>
               ))}
-              <Button variant="whatsapp" size="lg" className="mt-3 min-h-[48px]" asChild>
-                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
-                  Fale Conosco
-                </a>
+              <Button variant="default" size="lg" className="mt-3 min-h-[48px]" onClick={handleOpenChat}>
+                <MessageCircle className="w-5 h-5 mr-2" />
+                Fale Conosco
               </Button>
             </nav>
           </div>
