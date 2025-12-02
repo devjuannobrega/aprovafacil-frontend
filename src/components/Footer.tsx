@@ -1,138 +1,108 @@
-import { Link } from "react-router-dom";
-import { Home, Instagram, Linkedin, Mail, Phone, MapPin } from "lucide-react";
+import { Shield, Mail, Phone, MapPin, MessageCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useChat } from "@/contexts/ChatContext";
 
 const Footer = () => {
-  const currentYear = new Date().getFullYear();
+  const { openChat } = useChat();
+
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+  };
 
   return (
-    <footer className="bg-primary text-primary-foreground">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+    <footer className="bg-primary-dark text-primary-dark-foreground">
+      {/* Main Footer */}
+      <div className="container py-10 sm:py-16 px-4 sm:px-6">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10">
           {/* Brand */}
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3">
-              <div className="bg-secondary p-2 rounded-lg">
-                <Home className="h-6 w-6 text-secondary-foreground" />
+          <div className="col-span-2 lg:col-span-1">
+            <a href="#" className="flex items-center gap-2 mb-4 sm:mb-6">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-primary to-primary-light flex items-center justify-center">
+                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-primary-foreground" />
               </div>
-              <div>
-                <h3 className="text-xl font-bold">Aprova Fácil</h3>
-                <p className="text-sm text-primary-foreground/80">Grupo PAM Realizações</p>
-              </div>
-            </div>
-            <p className="text-sm text-primary-foreground/90">
-              Do sonho à chave, a gente aprova com você.
+              <span className="font-poppins font-bold text-lg sm:text-xl">Limpa Nome</span>
+            </a>
+            <p className="text-primary-dark-foreground/70 mb-4 sm:mb-6 leading-relaxed text-sm sm:text-base">
+              Especialistas em regularização de crédito. Ajudamos você a recuperar seu nome e conquistar seus sonhos.
             </p>
-            <p className="text-xs text-primary-foreground/70">
-              Correspondente Caixa Autorizado
-            </p>
+            <Button variant="default" className="min-h-[44px]" onClick={openChat}>
+              <MessageCircle className="w-5 h-5" />
+              Fale Conosco
+            </Button>
           </div>
 
-          {/* Quick Links */}
+          {/* Links */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Links Rápidos</h4>
-            <ul className="space-y-2">
-              <li>
-                <Link to="/" className="text-sm text-primary-foreground/90 hover:text-secondary transition-colors">
-                  Início
-                </Link>
-              </li>
-              <li>
-                <Link to="/sobre" className="text-sm text-primary-foreground/90 hover:text-secondary transition-colors">
-                  Sobre Nós
-                </Link>
-              </li>
-              <li>
-                <Link to="/servicos" className="text-sm text-primary-foreground/90 hover:text-secondary transition-colors">
-                  Serviços
-                </Link>
-              </li>
-              <li>
-                <Link to="/simular" className="text-sm text-primary-foreground/90 hover:text-secondary transition-colors">
-                  Simule seu Crédito
-                </Link>
-              </li>
-              <li>
-                <Link to="/contato" className="text-sm text-primary-foreground/90 hover:text-secondary transition-colors">
-                  Contato
-                </Link>
-              </li>
+            <h4 className="font-poppins font-semibold text-base sm:text-lg mb-4 sm:mb-6">Links Rápidos</h4>
+            <ul className="space-y-2 sm:space-y-3">
+              {[
+                { label: "Início", id: "hero" },
+                { label: "Serviços", id: "servicos" },
+                { label: "Plano Especial", id: "plano" },
+                { label: "Depoimentos", id: "depoimentos" },
+                { label: "Pagamento", id: "pagamento" },
+              ].map((link) => (
+                <li key={link.id}>
+                  <button
+                    onClick={() => scrollToSection(link.id)}
+                    className="text-primary-dark-foreground/70 hover:text-primary-light transition-colors text-sm sm:text-base min-h-[44px] sm:min-h-0 flex items-center"
+                  >
+                    {link.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Services */}
+          <div>
+            <h4 className="font-poppins font-semibold text-base sm:text-lg mb-4 sm:mb-6">Nossos Serviços</h4>
+            <ul className="space-y-2 sm:space-y-3 text-primary-dark-foreground/70 text-sm sm:text-base">
+              <li>Retirada de Restrições</li>
+              <li>Negociação de Débitos</li>
+              <li>Regularização Bacen</li>
+              <li>Cancelamento de Protestos</li>
+              <li>Aumento de Score</li>
             </ul>
           </div>
 
           {/* Contact */}
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Contato</h4>
-            <ul className="space-y-3">
-              <li className="flex items-start space-x-3">
-                <Phone className="h-5 w-5 text-secondary mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm text-primary-foreground/90">WhatsApp</p>
-                  <a href="https://wa.me/5511999999999" className="text-sm hover:text-secondary transition-colors">
-                    (11) 99999-9999
-                  </a>
-                </div>
+          <div className="col-span-2 lg:col-span-1">
+            <h4 className="font-poppins font-semibold text-base sm:text-lg mb-4 sm:mb-6">Contato</h4>
+            <ul className="space-y-3 sm:space-y-4">
+              <li className="flex items-center gap-2.5 sm:gap-3 text-primary-dark-foreground/70 text-sm sm:text-base">
+                <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-primary-light flex-shrink-0" />
+                <span>(11) 99999-9999</span>
               </li>
-              <li className="flex items-start space-x-3">
-                <Mail className="h-5 w-5 text-secondary mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm text-primary-foreground/90">E-mail</p>
-                  <a href="mailto:contato@aprovafacil.com.br" className="text-sm hover:text-secondary transition-colors">
-                    contato@aprovafacil.com.br
-                  </a>
-                </div>
+              <li className="flex items-center gap-2.5 sm:gap-3 text-primary-dark-foreground/70 text-sm sm:text-base">
+                <Mail className="w-4 h-4 sm:w-5 sm:h-5 text-primary-light flex-shrink-0" />
+                <span className="break-all">contato@limpanome.com.br</span>
               </li>
-              <li className="flex items-start space-x-3">
-                <MapPin className="h-5 w-5 text-secondary mt-0.5 flex-shrink-0" />
-                <div>
-                  <p className="text-sm text-primary-foreground/90">Endereço</p>
-                  <p className="text-sm">São Paulo, SP</p>
-                </div>
+              <li className="flex items-start gap-2.5 sm:gap-3 text-primary-dark-foreground/70 text-sm sm:text-base">
+                <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-primary-light flex-shrink-0 mt-0.5" />
+                <span>Atendimento 100% Online em todo o Brasil</span>
               </li>
             </ul>
           </div>
-
-          {/* Social */}
-          <div>
-            <h4 className="text-lg font-semibold mb-4">Redes Sociais</h4>
-            <div className="flex space-x-4">
-              <a
-                href="https://instagram.com/pamrealizacoes"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-primary-foreground/10 p-3 rounded-lg hover:bg-secondary transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a
-                href="https://linkedin.com/company/grupo-pam-realizacoes"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-primary-foreground/10 p-3 rounded-lg hover:bg-secondary transition-colors"
-                aria-label="LinkedIn"
-              >
-                <Linkedin className="h-5 w-5" />
-              </a>
-            </div>
-            <div className="mt-6">
-              <p className="text-xs text-primary-foreground/70 mb-2">Horário de Atendimento:</p>
-              <p className="text-sm text-primary-foreground/90">Seg - Sex: 9h às 18h</p>
-              <p className="text-sm text-primary-foreground/90">Sáb: 9h às 13h</p>
-            </div>
-          </div>
         </div>
+      </div>
 
-        <div className="mt-12 pt-8 border-t border-primary-foreground/10">
-          <div className="text-center space-y-2">
-            <p className="text-sm text-primary-foreground/90">
-              Aprova Fácil — Correspondente Caixa Autorizado
-            </p>
-            <p className="text-sm text-primary-foreground/80">
-              Do sonho à chave, a gente aprova com você.
-            </p>
-            <p className="text-xs text-primary-foreground/60">
-              © {currentYear} Grupo PAM Realizações — Todos os direitos reservados.
-            </p>
+      {/* Bottom Bar */}
+      <div className="border-t border-primary-dark-foreground/10">
+        <div className="container py-4 sm:py-6 px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4">
+          <p className="text-primary-dark-foreground/60 text-xs sm:text-sm text-center md:text-left">
+            © {new Date().getFullYear()} Limpa Nome. Todos os direitos reservados.
+          </p>
+          <div className="flex items-center gap-4 sm:gap-6">
+            <a href="#" className="text-primary-dark-foreground/60 hover:text-primary-light text-xs sm:text-sm transition-colors min-h-[44px] sm:min-h-0 flex items-center">
+              Política de Privacidade
+            </a>
+            <a href="#" className="text-primary-dark-foreground/60 hover:text-primary-light text-xs sm:text-sm transition-colors min-h-[44px] sm:min-h-0 flex items-center">
+              Termos de Uso
+            </a>
           </div>
         </div>
       </div>
