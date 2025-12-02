@@ -1,0 +1,118 @@
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Menu, X, Shield } from "lucide-react";
+
+const WHATSAPP_LINK = "https://wa.me/5511999999999?text=Olá! Gostaria de saber mais sobre os serviços Limpa Nome.";
+
+const Header = () => {
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth" });
+    }
+    setIsMobileMenuOpen(false);
+  };
+
+  return (
+    <header
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isScrolled
+          ? "bg-card/95 backdrop-blur-lg shadow-soft py-3"
+          : "bg-transparent py-5"
+      }`}
+    >
+      <div className="container flex items-center justify-between">
+        {/* Logo */}
+        <a href="#" className="flex items-center gap-2 group">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-light flex items-center justify-center shadow-glow group-hover:scale-110 transition-transform duration-300">
+            <Shield className="w-6 h-6 text-primary-foreground" />
+          </div>
+          <span className={`font-poppins font-bold text-xl transition-colors duration-300 ${
+            isScrolled ? "text-foreground" : "text-primary-foreground"
+          }`}>
+            Limpa Nome
+          </span>
+        </a>
+
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-8">
+          {[
+            { label: "Início", id: "hero" },
+            { label: "Serviços", id: "servicos" },
+            { label: "Plano", id: "plano" },
+            { label: "Depoimentos", id: "depoimentos" },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => scrollToSection(item.id)}
+              className={`font-medium transition-colors duration-200 hover:text-primary ${
+                isScrolled ? "text-foreground" : "text-primary-foreground/90 hover:text-primary-foreground"
+              }`}
+            >
+              {item.label}
+            </button>
+          ))}
+          <Button
+            variant="whatsapp"
+            size="sm"
+            asChild
+          >
+            <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+              Fale Conosco
+            </a>
+          </Button>
+        </nav>
+
+        {/* Mobile Menu Button */}
+        <button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          className={`md:hidden p-2 rounded-lg transition-colors ${
+            isScrolled ? "text-foreground" : "text-primary-foreground"
+          }`}
+        >
+          {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="absolute top-full left-0 right-0 bg-card shadow-lg md:hidden animate-slide-up">
+            <nav className="flex flex-col p-4 gap-2">
+              {[
+                { label: "Início", id: "hero" },
+                { label: "Serviços", id: "servicos" },
+                { label: "Plano", id: "plano" },
+                { label: "Depoimentos", id: "depoimentos" },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => scrollToSection(item.id)}
+                  className="text-foreground font-medium py-3 px-4 rounded-lg hover:bg-primary-muted transition-colors text-left"
+                >
+                  {item.label}
+                </button>
+              ))}
+              <Button variant="whatsapp" className="mt-2" asChild>
+                <a href={WHATSAPP_LINK} target="_blank" rel="noopener noreferrer">
+                  Fale Conosco
+                </a>
+              </Button>
+            </nav>
+          </div>
+        )}
+      </div>
+    </header>
+  );
+};
+
+export default Header;
