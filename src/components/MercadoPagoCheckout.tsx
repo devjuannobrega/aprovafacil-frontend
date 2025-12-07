@@ -1,9 +1,13 @@
 import { useEffect, useState, useRef } from "react";
+import { Link } from "react-router-dom";
 import { useMercadoPago, CardPaymentFormData, CardType, PaymentMethodType } from "@/hooks/useMercadoPago";
 import { paymentApi, PaymentResponse } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, CheckCircle, XCircle, Clock, CreditCard, QrCode, ExternalLink } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Clock, CreditCard, QrCode, ExternalLink, MessageCircle, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+// Número do WhatsApp (pode ser movido para .env)
+const WHATSAPP_NUMBER = "5511999999999";
 
 interface MercadoPagoCheckoutProps {
   orderId: number;
@@ -285,6 +289,39 @@ const MercadoPagoCheckout = ({
               <span>Iniciaremos o processo de limpeza do seu nome</span>
             </li>
           </ul>
+        </div>
+
+        {/* Botões de Ação */}
+        <div className="w-full max-w-sm space-y-3">
+          <Button
+            asChild
+            variant="whatsapp"
+            size="lg"
+            className="w-full min-h-[52px]"
+          >
+            <a
+              href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
+                `Olá! Acabei de contratar o serviço ${productTitle}. Pedido #${orderId}. Gostaria de saber os próximos passos.`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <MessageCircle className="w-5 h-5" />
+              Falar no WhatsApp
+            </a>
+          </Button>
+
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            className="w-full min-h-[48px]"
+          >
+            <Link to="/">
+              <Home className="w-5 h-5" />
+              Voltar ao Início
+            </Link>
+          </Button>
         </div>
       </div>
     );
