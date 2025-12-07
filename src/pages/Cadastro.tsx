@@ -40,7 +40,71 @@ const validateEmail = (email: string): boolean => {
 
 const validateCPF = (cpf: string): boolean => {
   const numbers = cpf.replace(/\D/g, "");
-  return numbers.length === 11;
+  if (numbers.length !== 11) return false;
+
+  // Verifica se todos os dígitos são iguais
+  if (/^(\d)\1+$/.test(numbers)) return false;
+
+  // Validação do primeiro dígito verificador
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(numbers[i]) * (10 - i);
+  }
+  let remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(numbers[9])) return false;
+
+  // Validação do segundo dígito verificador
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(numbers[i]) * (11 - i);
+  }
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(numbers[10])) return false;
+
+  return true;
+};
+
+const validateCNPJ = (cnpj: string): boolean => {
+  const numbers = cnpj.replace(/\D/g, "");
+  if (numbers.length !== 14) return false;
+
+  // Verifica se todos os dígitos são iguais
+  if (/^(\d)\1+$/.test(numbers)) return false;
+
+  // Validação do primeiro dígito verificador
+  const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  let sum = 0;
+  for (let i = 0; i < 12; i++) {
+    sum += parseInt(numbers[i]) * weights1[i];
+  }
+  let remainder = sum % 11;
+  const digit1 = remainder < 2 ? 0 : 11 - remainder;
+  if (digit1 !== parseInt(numbers[12])) return false;
+
+  // Validação do segundo dígito verificador
+  const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  sum = 0;
+  for (let i = 0; i < 13; i++) {
+    sum += parseInt(numbers[i]) * weights2[i];
+  }
+  remainder = sum % 11;
+  const digit2 = remainder < 2 ? 0 : 11 - remainder;
+  if (digit2 !== parseInt(numbers[13])) return false;
+
+  return true;
+};
+
+const validateCPFOrCNPJ = (value: string): boolean => {
+  const numbers = value.replace(/\D/g, "");
+  if (numbers.length === 11) return validateCPF(value);
+  if (numbers.length === 14) return validateCNPJ(value);
+  return false;
+};
+
+const isCNPJ = (value: string): boolean => {
+  return value.replace(/\D/g, "").length > 11;
 };
 
 const validatePhone = (phone: string): boolean => {
@@ -106,8 +170,20 @@ const Cadastro = () => {
     return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
   };
 
-  const formatCPF = (value: string) => {
+  // Formata CPF ou CNPJ automaticamente
+  const formatCPFOrCNPJ = (value: string) => {
     const numbers = value.replace(/\D/g, "");
+
+    // CNPJ: 00.000.000/0000-00
+    if (numbers.length > 11) {
+      if (numbers.length <= 2) return numbers;
+      if (numbers.length <= 5) return `${numbers.slice(0, 2)}.${numbers.slice(2)}`;
+      if (numbers.length <= 8) return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5)}`;
+      if (numbers.length <= 12) return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8)}`;
+      return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8, 12)}-${numbers.slice(12, 14)}`;
+    }
+
+    // CPF: 000.000.000-00
     if (numbers.length <= 3) return numbers;
     if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
     if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
@@ -169,7 +245,7 @@ const Cadastro = () => {
     if (name === "phone") {
       setFormData({ ...formData, [name]: formatPhone(value) });
     } else if (name === "cpf") {
-      setFormData({ ...formData, [name]: formatCPF(value) });
+      setFormData({ ...formData, [name]: formatCPFOrCNPJ(value) });
     } else if (name === "cep") {
       const formattedCEP = formatCEP(value);
       setFormData({ ...formData, [name]: formattedCEP });
@@ -186,12 +262,23 @@ const Cadastro = () => {
   };
 
   // Validações
+  const cpfCnpjError = () => {
+    if (!touched.cpf) return null;
+    const numbers = formData.cpf.replace(/\D/g, "");
+    if (numbers.length === 0) return "CPF/CNPJ obrigatório";
+    if (numbers.length < 11) return "CPF/CNPJ incompleto";
+    if (numbers.length === 11 && !validateCPF(formData.cpf)) return "CPF inválido";
+    if (numbers.length > 11 && numbers.length < 14) return "CNPJ incompleto";
+    if (numbers.length === 14 && !validateCNPJ(formData.cpf)) return "CNPJ inválido";
+    return null;
+  };
+
   const errors = {
     name: touched.name && formData.name.length < 3 ? "Nome deve ter pelo menos 3 caracteres" : null,
     email: touched.email && !validateEmail(formData.email) ? "E-mail inválido" : null,
     password: touched.password && !validatePassword(formData.password) ? "Senha deve ter pelo menos 6 caracteres" : null,
     confirmPassword: touched.confirmPassword && formData.password !== formData.confirmPassword ? "Senhas não conferem" : null,
-    cpf: touched.cpf && !validateCPF(formData.cpf) ? "CPF inválido" : null,
+    cpf: cpfCnpjError(),
     phone: touched.phone && !validatePhone(formData.phone) ? "Telefone inválido" : null,
     cep: touched.cep && !validateCEP(formData.cep) ? "CEP inválido" : null,
     street: touched.street && formData.street.length < 3 ? "Rua inválida" : null,
@@ -206,7 +293,7 @@ const Cadastro = () => {
     validateEmail(formData.email) &&
     validatePassword(formData.password) &&
     formData.password === formData.confirmPassword &&
-    validateCPF(formData.cpf) &&
+    validateCPFOrCNPJ(formData.cpf) &&
     validatePhone(formData.phone) &&
     validateCEP(formData.cep) &&
     formData.street.length >= 3 &&
@@ -437,18 +524,18 @@ const Cadastro = () => {
                   )}
                 </div>
                 <div>
-                  <Label htmlFor="cpf">CPF *</Label>
+                  <Label htmlFor="cpf">CPF / CNPJ *</Label>
                   <div className="relative">
                     <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 mt-0.5 w-4 h-4 text-muted-foreground" />
                     <Input
                       id="cpf"
                       name="cpf"
-                      placeholder="000.000.000-00"
+                      placeholder="000.000.000-00 ou 00.000.000/0000-00"
                       value={formData.cpf}
                       onChange={handleChange}
                       onBlur={() => handleBlur("cpf")}
                       className={cn("mt-1.5 h-11 pl-10", errors.cpf && "border-destructive")}
-                      maxLength={14}
+                      maxLength={18}
                     />
                   </div>
                   {errors.cpf && (

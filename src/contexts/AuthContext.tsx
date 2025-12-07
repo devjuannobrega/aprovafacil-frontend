@@ -101,9 +101,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return { success: false, message: "Este e-mail já está cadastrado" };
     }
 
-    // Verificar se CPF já existe
+    // Verificar se CPF/CNPJ já existe
     if (usersDB.some((u) => u.cpf.replace(/\D/g, "") === data.cpf.replace(/\D/g, ""))) {
-      return { success: false, message: "Este CPF já está cadastrado" };
+      return { success: false, message: "Este CPF/CNPJ já está cadastrado" };
     }
 
     // Criar novo usuário
