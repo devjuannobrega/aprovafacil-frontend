@@ -1,41 +1,35 @@
 import { useEffect, useState, useRef } from "react";
 import { useMercadoPago, CardPaymentFormData, CardType, PaymentMethodType } from "@/hooks/useMercadoPago";
-import {
-  apiConfig,
-  getHeaders,
-  CustomerData,
-  formatCustomerToPayer,
-  PaymentResponse,
-  createPreference,
-} from "@/config/mercadopago";
+import { paymentApi, PaymentResponse } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, CheckCircle, XCircle, Clock, CreditCard, QrCode, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface MercadoPagoCheckoutProps {
-  customerData: CustomerData;
+  orderId: number;
   paymentMethod: PaymentMethodType;
-  amount?: number;
-  productTitle?: string;
-  onSuccess?: (payment: PaymentResponse) => void;
+  amount: number;
+  productTitle: string;
+  customerEmail: string;
+  customerCpf: string;
+  onSuccess?: () => void;
   onError?: (error: unknown) => void;
-  onPending?: (payment: PaymentResponse) => void;
+  onPending?: () => void;
 }
 
 type PaymentStatus = "idle" | "loading" | "ready" | "processing" | "approved" | "pending" | "rejected";
 
 const MercadoPagoCheckout = ({
-  customerData,
+  orderId,
   paymentMethod,
   amount,
   productTitle,
+  customerEmail,
+  customerCpf,
   onSuccess,
   onError,
   onPending,
 }: MercadoPagoCheckoutProps) => {
-  // Usar valores padrão se não fornecidos
-  const finalAmount = amount ?? apiConfig.product.price;
-  const finalTitle = productTitle ?? apiConfig.product.title;
   const { toast } = useToast();
   const { isLoading, error, isSDKLoaded, createCardPaymentBrick } = useMercadoPago();
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("idle");
@@ -93,7 +87,7 @@ const MercadoPagoCheckout = ({
 
       const controller = await createCardPaymentBrick(
         "cardPaymentBrick_container",
-        finalAmount,
+        amount,
         handlePaymentSubmit,
         () => {
           console.log("[Checkout] Brick pronto!");
@@ -107,8 +101,8 @@ const MercadoPagoCheckout = ({
             variant: "destructive",
           });
         },
-        customerData.email,
-        customerData.cpf.replace(/\D/g, ""),
+        customerEmail,
+        customerCpf.replace(/\D/g, ""),
         cardType
       );
 
@@ -127,7 +121,7 @@ const MercadoPagoCheckout = ({
         }
       }
     };
-  }, [isSDKLoaded, isCardPayment, customerData.email, customerData.cpf, createCardPaymentBrick, toast, paymentMethod]);
+  }, [isSDKLoaded, isCardPayment, customerEmail, customerCpf, createCardPaymentBrick, toast, paymentMethod, amount]);
 
   // Handler do submit do pagamento
   const handlePaymentSubmit = async (formData: CardPaymentFormData) => {
@@ -135,39 +129,15 @@ const MercadoPagoCheckout = ({
     setPaymentStatus("processing");
 
     try {
-      const payer = formatCustomerToPayer(customerData);
-
-      const paymentRequest = {
+      const result = await paymentApi.processCard({
+        order_id: orderId,
         token: formData.token,
-        transaction_amount: finalAmount,
         installments: formData.installments,
         payment_method_id: formData.payment_method_id,
         issuer_id: formData.issuer_id,
-        payer: {
-          email: payer.email,
-          first_name: payer.first_name,
-          last_name: payer.last_name,
-          identification: payer.identification,
-        },
-        description: finalTitle,
-        external_reference: `order_${Date.now()}_${customerData.cpf.replace(/\D/g, "")}`,
-      };
-
-      console.log("[Checkout] Enviando para API:", paymentRequest);
-
-      const response = await fetch(`${apiConfig.baseUrl}/api/payment/process`, {
-        method: "POST",
-        headers: getHeaders(),
-        body: JSON.stringify(paymentRequest),
       });
 
-      const result = await response.json();
       console.log("[Checkout] Resposta da API:", result);
-
-      if (!response.ok) {
-        throw new Error(result.detail || "Erro ao processar pagamento");
-      }
-
       setPaymentResult(result);
 
       switch (result.status) {
@@ -177,7 +147,7 @@ const MercadoPagoCheckout = ({
             title: "Pagamento Aprovado!",
             description: "Seu pagamento foi processado com sucesso.",
           });
-          onSuccess?.(result);
+          onSuccess?.();
           break;
 
         case "pending":
@@ -187,14 +157,14 @@ const MercadoPagoCheckout = ({
             title: "Pagamento Pendente",
             description: "Seu pagamento está sendo processado.",
           });
-          onPending?.(result);
+          onPending?.();
           break;
 
         case "rejected":
           setPaymentStatus("rejected");
           toast({
             title: "Pagamento Recusado",
-            description: getRejectMessage(result.status_detail),
+            description: "Pagamento recusado. Tente outro cartão.",
             variant: "destructive",
           });
           onError?.(result);
@@ -221,28 +191,10 @@ const MercadoPagoCheckout = ({
     }
   };
 
-  // Mensagens de pagamento rejeitado
-  const getRejectMessage = (statusDetail: string) => {
-    const messages: Record<string, string> = {
-      cc_rejected_insufficient_amount: "Saldo insuficiente no cartão.",
-      cc_rejected_bad_filled_card_number: "Número do cartão incorreto.",
-      cc_rejected_bad_filled_date: "Data de validade incorreta.",
-      cc_rejected_bad_filled_security_code: "Código de segurança incorreto.",
-      cc_rejected_bad_filled_other: "Dados do cartão incorretos.",
-      cc_rejected_call_for_authorize: "Entre em contato com a operadora do cartão.",
-      cc_rejected_card_disabled: "Cartão desabilitado.",
-      cc_rejected_max_attempts: "Limite de tentativas excedido.",
-      cc_rejected_duplicated_payment: "Pagamento duplicado.",
-      cc_rejected_high_risk: "Pagamento recusado por segurança.",
-    };
-    return messages[statusDetail] || "Pagamento recusado. Tente outro cartão.";
-  };
-
   // Tentar novamente
   const handleRetry = () => {
     setPaymentStatus("idle");
     setPaymentResult(null);
-    // Re-trigger o useEffect
     window.location.reload();
   };
 
@@ -284,7 +236,6 @@ const MercadoPagoCheckout = ({
   if (paymentStatus === "approved") {
     return (
       <div className="flex flex-col items-center justify-center p-6 sm:p-8 space-y-4 sm:space-y-6">
-        {/* Ícone com animação */}
         <div className="relative">
           <div className="absolute inset-0 bg-success/20 rounded-full animate-ping" />
           <div className="relative w-20 h-20 sm:w-24 sm:h-24 bg-success/10 rounded-full flex items-center justify-center">
@@ -292,7 +243,6 @@ const MercadoPagoCheckout = ({
           </div>
         </div>
 
-        {/* Título */}
         <div className="text-center space-y-2">
           <h3 className="font-poppins font-bold text-xl sm:text-2xl md:text-3xl text-success">
             Pagamento Aprovado!
@@ -302,25 +252,23 @@ const MercadoPagoCheckout = ({
           </p>
         </div>
 
-        {/* Card de confirmação */}
         <div className="w-full max-w-sm bg-success/5 border border-success/20 rounded-xl p-4 sm:p-5 space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Produto</span>
-            <span className="font-medium text-foreground">{finalTitle}</span>
+            <span className="font-medium text-foreground">{productTitle}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Valor</span>
-            <span className="font-medium text-foreground">R$ {finalAmount.toLocaleString("pt-BR")}</span>
+            <span className="font-medium text-foreground">R$ {amount.toLocaleString("pt-BR")}</span>
           </div>
           {paymentResult && (
             <div className="flex items-center justify-between text-sm pt-2 border-t border-success/20">
-              <span className="text-muted-foreground">ID da transação</span>
-              <span className="font-mono text-xs text-muted-foreground">{paymentResult.payment_id}</span>
+              <span className="text-muted-foreground">ID do pagamento</span>
+              <span className="font-mono text-xs text-muted-foreground">{paymentResult.mp_payment_id || paymentResult.payment_id}</span>
             </div>
           )}
         </div>
 
-        {/* Próximos passos */}
         <div className="w-full max-w-sm bg-muted/50 rounded-xl p-4 sm:p-5">
           <h4 className="font-semibold text-sm sm:text-base text-foreground mb-3">Próximos passos:</h4>
           <ul className="space-y-2 text-xs sm:text-sm text-muted-foreground">
@@ -338,19 +286,6 @@ const MercadoPagoCheckout = ({
             </li>
           </ul>
         </div>
-
-        {/* WhatsApp para dúvidas */}
-        <p className="text-center text-xs sm:text-sm text-muted-foreground">
-          Dúvidas? Entre em contato pelo{" "}
-          <a
-            href="https://wa.me/5511999999999?text=Olá! Acabei de fazer minha compra e gostaria de informações."
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline font-medium"
-          >
-            WhatsApp
-          </a>
-        </p>
       </div>
     );
   }
@@ -359,12 +294,10 @@ const MercadoPagoCheckout = ({
   if (paymentStatus === "pending") {
     return (
       <div className="flex flex-col items-center justify-center p-6 sm:p-8 space-y-4 sm:space-y-6">
-        {/* Ícone */}
         <div className="w-20 h-20 sm:w-24 sm:h-24 bg-warning/10 rounded-full flex items-center justify-center">
           <Clock className="w-12 h-12 sm:w-14 sm:h-14 text-warning" />
         </div>
 
-        {/* Título */}
         <div className="text-center space-y-2">
           <h3 className="font-poppins font-bold text-xl sm:text-2xl md:text-3xl text-warning">
             Pagamento em Análise
@@ -374,7 +307,6 @@ const MercadoPagoCheckout = ({
           </p>
         </div>
 
-        {/* Info card */}
         <div className="w-full max-w-sm bg-warning/5 border border-warning/20 rounded-xl p-4 sm:p-5 space-y-3">
           <div className="flex items-center gap-3">
             <Clock className="w-5 h-5 text-warning flex-shrink-0" />
@@ -385,7 +317,6 @@ const MercadoPagoCheckout = ({
           </div>
         </div>
 
-        {/* O que acontece agora */}
         <div className="w-full max-w-sm bg-muted/50 rounded-xl p-4 sm:p-5">
           <h4 className="font-semibold text-sm sm:text-base text-foreground mb-3">O que acontece agora?</h4>
           <ul className="space-y-2 text-xs sm:text-sm text-muted-foreground">
@@ -399,12 +330,6 @@ const MercadoPagoCheckout = ({
             </li>
           </ul>
         </div>
-
-        {paymentResult && (
-          <p className="text-xs text-muted-foreground">
-            Referência: {paymentResult.payment_id}
-          </p>
-        )}
       </div>
     );
   }
@@ -413,12 +338,10 @@ const MercadoPagoCheckout = ({
   if (paymentStatus === "rejected") {
     return (
       <div className="flex flex-col items-center justify-center p-6 sm:p-8 space-y-4 sm:space-y-6">
-        {/* Ícone */}
         <div className="w-20 h-20 sm:w-24 sm:h-24 bg-destructive/10 rounded-full flex items-center justify-center">
           <XCircle className="w-12 h-12 sm:w-14 sm:h-14 text-destructive" />
         </div>
 
-        {/* Título */}
         <div className="text-center space-y-2">
           <h3 className="font-poppins font-bold text-xl sm:text-2xl md:text-3xl text-destructive">
             Pagamento não aprovado
@@ -428,7 +351,6 @@ const MercadoPagoCheckout = ({
           </p>
         </div>
 
-        {/* Dicas */}
         <div className="w-full max-w-sm bg-muted/50 rounded-xl p-4 sm:p-5">
           <h4 className="font-semibold text-sm sm:text-base text-foreground mb-3">Dicas para aprovação:</h4>
           <ul className="space-y-2 text-xs sm:text-sm text-muted-foreground">
@@ -447,23 +369,9 @@ const MercadoPagoCheckout = ({
           </ul>
         </div>
 
-        {/* Botão tentar novamente */}
         <Button onClick={handleRetry} variant="cta" size="lg" className="w-full max-w-sm min-h-[48px]">
           Tentar novamente
         </Button>
-
-        {/* Suporte */}
-        <p className="text-center text-xs sm:text-sm text-muted-foreground">
-          Precisa de ajuda?{" "}
-          <a
-            href="https://wa.me/5511999999999?text=Olá! Tive um problema com meu pagamento e preciso de ajuda."
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary hover:underline font-medium"
-          >
-            Fale conosco
-          </a>
-        </p>
       </div>
     );
   }
@@ -477,7 +385,10 @@ const MercadoPagoCheckout = ({
         description: "Você será redirecionado para o Mercado Pago.",
       });
 
-      const preference = await createPreference(customerData);
+      const preference = await paymentApi.createPreference({
+        order_id: orderId,
+        payment_method: "pix_boleto",
+      });
 
       // Redirecionar para o checkout do Mercado Pago
       window.location.href = preference.init_point;
@@ -497,9 +408,7 @@ const MercadoPagoCheckout = ({
 
   return (
     <div className="space-y-4">
-      {/* Conteúdo baseado no método selecionado */}
       {isCardPayment ? (
-        /* Formulário do cartão */
         <div className="relative">
           {showLoading && (
             <div className="flex flex-col items-center justify-center p-8 space-y-4">
@@ -516,7 +425,6 @@ const MercadoPagoCheckout = ({
           />
         </div>
       ) : (
-        /* Pix/Boleto - Botão para redirecionar */
         <div className="space-y-4">
           <div className="bg-muted/50 rounded-xl p-4 sm:p-6 text-center">
             <QrCode className="w-12 h-12 sm:w-16 sm:h-16 text-primary mx-auto mb-4" />

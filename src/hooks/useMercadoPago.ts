@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { apiConfig, getHeaders, CustomerData, formatCustomerToPayer } from "@/config/mercadopago";
+import { getToken } from "@/services/api";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 declare global {
   interface Window {
@@ -74,13 +76,23 @@ export const useMercadoPago = (): UseMercadoPagoReturn => {
         setIsLoading(true);
         setError(null);
 
-        const response = await fetch(`${apiConfig.baseUrl}/api/payment/public-key`, {
+        const token = getToken();
+        const headers: HeadersInit = {
+          "Content-Type": "application/json",
+        };
+
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_URL}/api/payment/public-key`, {
           method: "GET",
-          headers: getHeaders(),
+          headers,
         });
 
         if (!response.ok) {
-          throw new Error("Erro ao buscar public key");
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || "Erro ao buscar public key");
         }
 
         const data = await response.json();
@@ -88,7 +100,7 @@ export const useMercadoPago = (): UseMercadoPagoReturn => {
         setPublicKey(data.public_key);
       } catch (err) {
         console.error("[MP] Erro ao buscar public key:", err);
-        setError("Não foi possível inicializar o pagamento");
+        setError(err instanceof Error ? err.message : "Não foi possível inicializar o pagamento");
       } finally {
         setIsLoading(false);
       }

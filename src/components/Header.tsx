@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Shield, MessageCircle, User, LogOut, LogIn } from "lucide-react";
+import { FiMenu, FiX, FiMessageCircle, FiUser, FiLogOut, FiLogIn } from "react-icons/fi";
+import { HiShieldCheck } from "react-icons/hi2";
 import { useChat } from "@/contexts/ChatContext";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -63,12 +64,12 @@ const Header = () => {
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2 group">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-light flex items-center justify-center shadow-glow group-hover:scale-110 transition-transform duration-300">
-            <Shield className="w-6 h-6 text-primary-foreground" />
+            <HiShieldCheck className="w-6 h-6 text-primary-foreground" />
           </div>
           <span className={`font-poppins font-bold text-xl transition-colors duration-300 ${
             isScrolled ? "text-foreground" : "text-primary-foreground"
           }`}>
-            Limpa Nome
+            Aprova Fácil
           </span>
         </Link>
 
@@ -97,7 +98,7 @@ const Header = () => {
               <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
                 isScrolled ? "bg-primary/10" : "bg-white/10"
               }`}>
-                <User className={`w-4 h-4 ${isScrolled ? "text-primary" : "text-primary-foreground"}`} />
+                <FiUser className={`w-4 h-4 ${isScrolled ? "text-primary" : "text-primary-foreground"}`} />
                 <span className={`text-sm font-medium ${
                   isScrolled ? "text-foreground" : "text-primary-foreground"
                 }`}>
@@ -110,7 +111,7 @@ const Header = () => {
                 onClick={handleLogout}
                 className={isScrolled ? "" : "text-primary-foreground hover:text-primary-foreground hover:bg-white/10"}
               >
-                <LogOut className="w-4 h-4" />
+                <FiLogOut className="w-4 h-4" />
               </Button>
             </div>
           ) : (
@@ -142,7 +143,7 @@ const Header = () => {
           }`}
           aria-label={isMobileMenuOpen ? "Fechar menu" : "Abrir menu"}
         >
-          {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {isMobileMenuOpen ? <FiX className="w-6 h-6" /> : <FiMenu className="w-6 h-6" />}
         </button>
 
         {/* Mobile Menu */}
@@ -153,7 +154,7 @@ const Header = () => {
               {isAuthenticated && (
                 <div className="flex items-center gap-3 px-4 py-3 mb-2 bg-primary/5 rounded-xl">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="w-5 h-5 text-primary" />
+                    <FiUser className="w-5 h-5 text-primary" />
                   </div>
                   <div>
                     <p className="font-medium text-foreground">{firstName}</p>
@@ -178,7 +179,7 @@ const Header = () => {
               ))}
 
               <Button variant="outline" size="lg" className="mt-2 min-h-[48px]" onClick={handleOpenChat}>
-                <MessageCircle className="w-5 h-5 mr-2" />
+                <FiMessageCircle className="w-5 h-5 mr-2" />
                 Fale Conosco
               </Button>
 
@@ -190,7 +191,7 @@ const Header = () => {
                   className="mt-2 min-h-[48px] text-destructive hover:text-destructive hover:bg-destructive/10"
                   onClick={handleLogout}
                 >
-                  <LogOut className="w-5 h-5 mr-2" />
+                  <FiLogOut className="w-5 h-5 mr-2" />
                   Sair da conta
                 </Button>
               ) : (
@@ -199,7 +200,7 @@ const Header = () => {
                     Criar conta
                   </Button>
                   <Button variant="outline" size="lg" className="min-h-[48px]" onClick={handleLogin}>
-                    <LogIn className="w-5 h-5 mr-2" />
+                    <FiLogIn className="w-5 h-5 mr-2" />
                     Entrar
                   </Button>
                 </div>

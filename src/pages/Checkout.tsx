@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCart } from "@/contexts/CartContext";
+import { ordersApi, OrderResponse, ApiError } from "@/services/api";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -16,21 +17,49 @@ import {
   User,
   MapPin,
   Package,
+  Loader2,
 } from "lucide-react";
 import MercadoPagoCheckout from "@/components/MercadoPagoCheckout";
-import { CustomerData, PaymentResponse } from "@/config/mercadopago";
 import { PaymentMethodType } from "@/hooks/useMercadoPago";
 
 const Checkout = () => {
   const { toast } = useToast();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { selectedProduct, personType, getPrice, clearCart } = useCart();
   const navigate = useNavigate();
 
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodType>("credit_card");
+  const [order, setOrder] = useState<OrderResponse | null>(null);
+  const [isCreatingOrder, setIsCreatingOrder] = useState(false);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
 
-  // Redirecionar se não estiver logado ou sem produto
+  // Guardar informações do produto para exibir após pagamento (calculado uma vez na montagem)
+  const [productInfo] = useState(() => {
+    if (!selectedProduct) return null;
+    const price = personType === "PF" ? selectedProduct.pricePF : selectedProduct.pricePJ;
+    return {
+      name: selectedProduct.name,
+      description: selectedProduct.description,
+      deliverables: selectedProduct.deliverables,
+      deadline: selectedProduct.deadline,
+      price,
+    };
+  });
+
+  // Redirecionar se não estiver logado ou sem produto (após carregamento)
   useEffect(() => {
+    // Não redirecionar se o pagamento já foi concluído
+    if (paymentCompleted) return;
+
+    // Aguardar o carregamento do auth
+    if (isAuthLoading) return;
+
+    // Marcar que já verificamos
+    if (!hasCheckedAuth) {
+      setHasCheckedAuth(true);
+    }
+
     if (!isAuthenticated) {
       toast({
         title: "Faça login para continuar",
@@ -50,37 +79,64 @@ const Checkout = () => {
       navigate("/#plano");
       return;
     }
-  }, [isAuthenticated, selectedProduct, navigate, toast]);
+  }, [isAuthLoading, isAuthenticated, selectedProduct, navigate, toast, hasCheckedAuth, paymentCompleted]);
 
-  if (!user || !selectedProduct) {
+  // Criar pedido ao montar o componente
+  useEffect(() => {
+    const createOrder = async () => {
+      if (!selectedProduct || order) return;
+
+      setIsCreatingOrder(true);
+      try {
+        const newOrder = await ordersApi.create({
+          items: [{ product_id: selectedProduct.id, quantity: 1 }],
+          person_type: personType.toLowerCase(),
+        });
+        setOrder(newOrder);
+      } catch (error) {
+        console.error("Erro ao criar pedido:", error);
+        if (error instanceof ApiError) {
+          toast({
+            title: "Erro ao criar pedido",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Erro ao criar pedido",
+            description: "Tente novamente mais tarde.",
+            variant: "destructive",
+          });
+        }
+      } finally {
+        setIsCreatingOrder(false);
+      }
+    };
+
+    createOrder();
+  }, [selectedProduct, personType, toast, order]);
+
+  // Mostrar loading enquanto carrega auth
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  // Permitir continuar se pagamento foi concluído (mesmo sem produto selecionado)
+  if (!user || (!productInfo && !paymentCompleted)) {
     return null;
   }
 
-  const price = getPrice();
+  // Usar productInfo que foi salvo na montagem do componente
+  const price = productInfo?.price || 0;
 
-  // Dados do cliente para pagamento
-  const customerData: CustomerData = {
-    name: user.name,
-    email: user.email,
-    cpf: user.cpf,
-    phone: user.phone,
-    cep: user.cep,
-    street: user.street,
-    number: user.number,
-    complement: user.complement,
-    neighborhood: user.neighborhood,
-    city: user.city,
-    state: user.state,
-  };
-
-  const handlePaymentSuccess = (payment: PaymentResponse) => {
-    console.log("Pagamento aprovado:", payment);
+  const handlePaymentSuccess = () => {
+    // Marcar como concluído ANTES de limpar o carrinho
+    setPaymentCompleted(true);
     clearCart();
-    toast({
-      title: "Pagamento aprovado!",
-      description: "Seu pedido foi confirmado com sucesso.",
-    });
-    // Poderia redirecionar para uma página de sucesso
   };
 
   const handlePaymentError = (error: unknown) => {
@@ -92,8 +148,7 @@ const Checkout = () => {
     });
   };
 
-  const handlePaymentPending = (payment: PaymentResponse) => {
-    console.log("Pagamento pendente:", payment);
+  const handlePaymentPending = () => {
     toast({
       title: "Pagamento pendente",
       description: "Aguardando confirmação do pagamento.",
@@ -163,11 +218,11 @@ const Checkout = () => {
                     </div>
                     <div>
                       <span className="text-muted-foreground">Telefone:</span>
-                      <p className="font-medium text-foreground">{user.phone}</p>
+                      <p className="font-medium text-foreground">{user.phone || "-"}</p>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">CPF:</span>
-                      <p className="font-medium text-foreground">{user.cpf}</p>
+                      <span className="text-muted-foreground">CPF/CNPJ:</span>
+                      <p className="font-medium text-foreground">{user.cpf || "-"}</p>
                     </div>
                   </div>
                 </div>
@@ -182,17 +237,23 @@ const Checkout = () => {
                       <h3 className="font-semibold text-foreground">Endereço</h3>
                       <p className="text-xs text-muted-foreground">Local de correspondência</p>
                     </div>
-                    <Check className="w-5 h-5 text-success ml-auto" />
+                    {user.street && <Check className="w-5 h-5 text-success ml-auto" />}
                   </div>
 
-                  <p className="text-sm text-foreground">
-                    {user.street}, {user.number}
-                    {user.complement && ` - ${user.complement}`}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {user.neighborhood} - {user.city}/{user.state}
-                  </p>
-                  <p className="text-sm text-muted-foreground">CEP: {user.cep}</p>
+                  {user.street ? (
+                    <>
+                      <p className="text-sm text-foreground">
+                        {user.street}, {user.number}
+                        {user.complement && ` - ${user.complement}`}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {user.neighborhood} - {user.city}/{user.state}
+                      </p>
+                      <p className="text-sm text-muted-foreground">CEP: {user.cep}</p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Endereço não informado</p>
+                  )}
                 </div>
 
                 {/* Forma de Pagamento */}
@@ -249,16 +310,33 @@ const Checkout = () => {
                     </button>
                   </div>
 
-                  {/* Checkout Mercado Pago */}
-                  <MercadoPagoCheckout
-                    customerData={customerData}
-                    paymentMethod={selectedPaymentMethod}
-                    amount={price}
-                    productTitle={selectedProduct.name}
-                    onSuccess={handlePaymentSuccess}
-                    onError={handlePaymentError}
-                    onPending={handlePaymentPending}
-                  />
+                  {/* Loading ao criar pedido */}
+                  {isCreatingOrder ? (
+                    <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                      <Loader2 className="w-10 h-10 text-primary animate-spin" />
+                      <p className="text-muted-foreground">Preparando seu pedido...</p>
+                    </div>
+                  ) : order && productInfo ? (
+                    /* Checkout Mercado Pago */
+                    <MercadoPagoCheckout
+                      orderId={order.id}
+                      paymentMethod={selectedPaymentMethod}
+                      amount={price}
+                      productTitle={productInfo.name}
+                      customerEmail={user.email}
+                      customerCpf={user.cpf || ""}
+                      onSuccess={handlePaymentSuccess}
+                      onError={handlePaymentError}
+                      onPending={handlePaymentPending}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-8 space-y-4">
+                      <p className="text-muted-foreground">Erro ao criar pedido. Tente novamente.</p>
+                      <Button onClick={() => window.location.reload()} variant="outline">
+                        Tentar novamente
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -273,38 +351,42 @@ const Checkout = () => {
                     <h3 className="font-semibold text-foreground">Produto</h3>
                   </div>
 
-                  <div className="bg-primary/5 rounded-xl p-4 mb-4">
-                    <h4 className="font-poppins font-bold text-lg text-primary mb-1">
-                      {selectedProduct.name}
-                    </h4>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      {personType === "PF" ? "Pessoa Física" : "Pessoa Jurídica"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {selectedProduct.description}
-                    </p>
-                  </div>
-
-                  {/* Entregas */}
-                  <div className="space-y-2 mb-4">
-                    {selectedProduct.deliverables.slice(0, 3).map((item, i) => (
-                      <div key={i} className="flex items-center gap-2 text-sm">
-                        <Check className="w-4 h-4 text-success" />
-                        <span className="text-foreground">{item}</span>
+                  {productInfo && (
+                    <>
+                      <div className="bg-primary/5 rounded-xl p-4 mb-4">
+                        <h4 className="font-poppins font-bold text-lg text-primary mb-1">
+                          {productInfo.name}
+                        </h4>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {personType === "PF" ? "Pessoa Física" : "Pessoa Jurídica"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {productInfo.description}
+                        </p>
                       </div>
-                    ))}
-                    {selectedProduct.deliverables.length > 3 && (
-                      <p className="text-xs text-muted-foreground ml-6">
-                        +{selectedProduct.deliverables.length - 3} itens
-                      </p>
-                    )}
-                  </div>
 
-                  {/* Prazo */}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="w-4 h-4" />
-                    <span>Prazo: {selectedProduct.deadline}</span>
-                  </div>
+                      {/* Entregas */}
+                      <div className="space-y-2 mb-4">
+                        {productInfo.deliverables.slice(0, 3).map((item, i) => (
+                          <div key={i} className="flex items-center gap-2 text-sm">
+                            <Check className="w-4 h-4 text-success" />
+                            <span className="text-foreground">{item}</span>
+                          </div>
+                        ))}
+                        {productInfo.deliverables.length > 3 && (
+                          <p className="text-xs text-muted-foreground ml-6">
+                            +{productInfo.deliverables.length - 3} itens
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Prazo */}
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="w-4 h-4" />
+                        <span>Prazo: {productInfo.deadline}</span>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 {/* Resumo do Pedido */}
@@ -313,11 +395,17 @@ const Checkout = () => {
 
                   <div className="space-y-3 pb-4 border-b border-border">
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">{selectedProduct.name}</span>
+                      <span className="text-muted-foreground">{productInfo?.name || "Produto"}</span>
                       <span className="text-foreground font-medium">
                         R$ {price.toLocaleString("pt-BR")}
                       </span>
                     </div>
+                    {order && (
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Pedido #</span>
+                        <span className="text-muted-foreground font-mono">{order.id}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex justify-between pt-4">
