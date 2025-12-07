@@ -1,12 +1,16 @@
 import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Shield, MessageCircle } from "lucide-react";
+import { Menu, X, Shield, MessageCircle, User, LogOut, LogIn } from "lucide-react";
 import { useChat } from "@/contexts/ChatContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { openChat } = useChat();
+  const { user, isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,6 +33,24 @@ const Header = () => {
     openChat();
   };
 
+  const handleLogout = () => {
+    logout();
+    setIsMobileMenuOpen(false);
+  };
+
+  const handleLogin = () => {
+    setIsMobileMenuOpen(false);
+    navigate("/login");
+  };
+
+  const handleCadastro = () => {
+    setIsMobileMenuOpen(false);
+    navigate("/cadastro");
+  };
+
+  // Pegar primeiro nome do usuário
+  const firstName = user?.name?.split(" ")[0] || "";
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -39,7 +61,7 @@ const Header = () => {
     >
       <div className="container flex items-center justify-between">
         {/* Logo */}
-        <a href="#" className="flex items-center gap-2 group">
+        <Link to="/" className="flex items-center gap-2 group">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary-light flex items-center justify-center shadow-glow group-hover:scale-110 transition-transform duration-300">
             <Shield className="w-6 h-6 text-primary-foreground" />
           </div>
@@ -48,14 +70,14 @@ const Header = () => {
           }`}>
             Limpa Nome
           </span>
-        </a>
+        </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden md:flex items-center gap-6">
           {[
             { label: "Início", id: "hero" },
             { label: "Serviços", id: "servicos" },
-            { label: "Plano", id: "plano" },
+            { label: "Produtos", id: "plano" },
             { label: "Depoimentos", id: "depoimentos" },
           ].map((item) => (
             <button
@@ -68,14 +90,48 @@ const Header = () => {
               {item.label}
             </button>
           ))}
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleOpenChat}
-          >
-            <MessageCircle className="w-4 h-4 mr-1" />
-            Fale Conosco
-          </Button>
+
+          {/* Auth Buttons */}
+          {isAuthenticated ? (
+            <div className="flex items-center gap-3 ml-2">
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${
+                isScrolled ? "bg-primary/10" : "bg-white/10"
+              }`}>
+                <User className={`w-4 h-4 ${isScrolled ? "text-primary" : "text-primary-foreground"}`} />
+                <span className={`text-sm font-medium ${
+                  isScrolled ? "text-foreground" : "text-primary-foreground"
+                }`}>
+                  {firstName}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className={isScrolled ? "" : "text-primary-foreground hover:text-primary-foreground hover:bg-white/10"}
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 ml-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogin}
+                className={isScrolled ? "" : "text-primary-foreground hover:text-primary-foreground hover:bg-white/10"}
+              >
+                Entrar
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleCadastro}
+              >
+                Cadastrar
+              </Button>
+            </div>
+          )}
         </nav>
 
         {/* Mobile Menu Button */}
@@ -93,10 +149,23 @@ const Header = () => {
         {isMobileMenuOpen && (
           <div className="absolute top-full left-0 right-0 bg-card shadow-lg md:hidden animate-slide-up border-t border-border">
             <nav className="flex flex-col p-4 gap-1">
+              {/* User Info (se logado) */}
+              {isAuthenticated && (
+                <div className="flex items-center gap-3 px-4 py-3 mb-2 bg-primary/5 rounded-xl">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">{firstName}</p>
+                    <p className="text-xs text-muted-foreground">{user?.email}</p>
+                  </div>
+                </div>
+              )}
+
               {[
                 { label: "Início", id: "hero" },
                 { label: "Serviços", id: "servicos" },
-                { label: "Plano", id: "plano" },
+                { label: "Produtos", id: "plano" },
                 { label: "Depoimentos", id: "depoimentos" },
               ].map((item) => (
                 <button
@@ -107,10 +176,34 @@ const Header = () => {
                   {item.label}
                 </button>
               ))}
-              <Button variant="default" size="lg" className="mt-3 min-h-[48px]" onClick={handleOpenChat}>
+
+              <Button variant="outline" size="lg" className="mt-2 min-h-[48px]" onClick={handleOpenChat}>
                 <MessageCircle className="w-5 h-5 mr-2" />
                 Fale Conosco
               </Button>
+
+              {/* Auth Buttons Mobile */}
+              {isAuthenticated ? (
+                <Button
+                  variant="ghost"
+                  size="lg"
+                  className="mt-2 min-h-[48px] text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="w-5 h-5 mr-2" />
+                  Sair da conta
+                </Button>
+              ) : (
+                <div className="flex flex-col gap-2 mt-2">
+                  <Button variant="default" size="lg" className="min-h-[48px]" onClick={handleCadastro}>
+                    Criar conta
+                  </Button>
+                  <Button variant="outline" size="lg" className="min-h-[48px]" onClick={handleLogin}>
+                    <LogIn className="w-5 h-5 mr-2" />
+                    Entrar
+                  </Button>
+                </div>
+              )}
             </nav>
           </div>
         )}

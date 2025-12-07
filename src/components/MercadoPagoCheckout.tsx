@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 interface MercadoPagoCheckoutProps {
   customerData: CustomerData;
   paymentMethod: PaymentMethodType;
+  amount?: number;
+  productTitle?: string;
   onSuccess?: (payment: PaymentResponse) => void;
   onError?: (error: unknown) => void;
   onPending?: (payment: PaymentResponse) => void;
@@ -25,10 +27,15 @@ type PaymentStatus = "idle" | "loading" | "ready" | "processing" | "approved" | 
 const MercadoPagoCheckout = ({
   customerData,
   paymentMethod,
+  amount,
+  productTitle,
   onSuccess,
   onError,
   onPending,
 }: MercadoPagoCheckoutProps) => {
+  // Usar valores padrão se não fornecidos
+  const finalAmount = amount ?? apiConfig.product.price;
+  const finalTitle = productTitle ?? apiConfig.product.title;
   const { toast } = useToast();
   const { isLoading, error, isSDKLoaded, createCardPaymentBrick } = useMercadoPago();
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("idle");
@@ -86,7 +93,7 @@ const MercadoPagoCheckout = ({
 
       const controller = await createCardPaymentBrick(
         "cardPaymentBrick_container",
-        apiConfig.product.price,
+        finalAmount,
         handlePaymentSubmit,
         () => {
           console.log("[Checkout] Brick pronto!");
@@ -132,7 +139,7 @@ const MercadoPagoCheckout = ({
 
       const paymentRequest = {
         token: formData.token,
-        transaction_amount: apiConfig.product.price,
+        transaction_amount: finalAmount,
         installments: formData.installments,
         payment_method_id: formData.payment_method_id,
         issuer_id: formData.issuer_id,
@@ -142,7 +149,7 @@ const MercadoPagoCheckout = ({
           last_name: payer.last_name,
           identification: payer.identification,
         },
-        description: apiConfig.product.title,
+        description: finalTitle,
         external_reference: `order_${Date.now()}_${customerData.cpf.replace(/\D/g, "")}`,
       };
 
@@ -299,11 +306,11 @@ const MercadoPagoCheckout = ({
         <div className="w-full max-w-sm bg-success/5 border border-success/20 rounded-xl p-4 sm:p-5 space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Produto</span>
-            <span className="font-medium text-foreground">Plano Limpa Nome</span>
+            <span className="font-medium text-foreground">{finalTitle}</span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Valor</span>
-            <span className="font-medium text-foreground">R$ 680,00</span>
+            <span className="font-medium text-foreground">R$ {finalAmount.toLocaleString("pt-BR")}</span>
           </div>
           {paymentResult && (
             <div className="flex items-center justify-between text-sm pt-2 border-t border-success/20">

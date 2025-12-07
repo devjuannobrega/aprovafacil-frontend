@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MessageCircle, Shield, Lock, ArrowRight, ArrowLeft, CreditCard, QrCode, Check, Clock, AlertCircle, Banknote } from "lucide-react";
+import { MessageCircle, Shield, Lock, ArrowRight, ArrowLeft, CreditCard, QrCode, Check, Clock, AlertCircle, Banknote, Loader2, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MercadoPagoCheckout from "./MercadoPagoCheckout";
 import { CustomerData, PaymentResponse } from "@/config/mercadopago";
@@ -12,6 +12,17 @@ import { cn } from "@/lib/utils";
 const WHATSAPP_LINK = "https://wa.me/5511999999999?text=Olá! Gostaria de saber mais sobre o Plano Limpa Nome.";
 
 type Step = "form" | "payment";
+
+// Interface para resposta do ViaCEP
+interface ViaCEPResponse {
+  cep: string;
+  logradouro: string;
+  complemento: string;
+  bairro: string;
+  localidade: string;
+  uf: string;
+  erro?: boolean;
+}
 
 // Validações em tempo real
 const validateEmail = (email: string): boolean => {
@@ -27,6 +38,11 @@ const validateCPF = (cpf: string): boolean => {
 const validatePhone = (phone: string): boolean => {
   const numbers = phone.replace(/\D/g, "");
   return numbers.length >= 10;
+};
+
+const validateCEP = (cep: string): boolean => {
+  const numbers = cep.replace(/\D/g, "");
+  return numbers.length === 8;
 };
 
 // Componente Stepper
@@ -144,9 +160,17 @@ const PaymentSection = () => {
     phone: "",
     cpf: "",
     email: "",
+    cep: "",
+    street: "",
+    number: "",
+    complement: "",
+    neighborhood: "",
+    city: "",
+    state: "",
     observation: "",
   });
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethodType>("credit_card");
+  const [isLoadingCEP, setIsLoadingCEP] = useState(false);
 
   // Estados de validação em tempo real
   const [touched, setTouched] = useState({
@@ -154,6 +178,12 @@ const PaymentSection = () => {
     phone: false,
     cpf: false,
     email: false,
+    cep: false,
+    street: false,
+    number: false,
+    neighborhood: false,
+    city: false,
+    state: false,
   });
 
   const formatPhone = (value: string) => {
@@ -171,6 +201,55 @@ const PaymentSection = () => {
     return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
   };
 
+  const formatCEP = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length <= 5) return numbers;
+    return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
+  };
+
+  // Buscar CEP na API ViaCEP
+  const fetchCEP = async (cep: string) => {
+    const numbers = cep.replace(/\D/g, "");
+    if (numbers.length !== 8) return;
+
+    setIsLoadingCEP(true);
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${numbers}/json/`);
+      const data: ViaCEPResponse = await response.json();
+
+      if (data.erro) {
+        toast({
+          title: "CEP não encontrado",
+          description: "Verifique o CEP digitado e tente novamente.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        street: data.logradouro || "",
+        neighborhood: data.bairro || "",
+        city: data.localidade || "",
+        state: data.uf || "",
+        complement: data.complemento || prev.complement,
+      }));
+
+      toast({
+        title: "Endereço encontrado",
+        description: "Os campos foram preenchidos automaticamente.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao buscar CEP",
+        description: "Não foi possível consultar o CEP. Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingCEP(false);
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
 
@@ -178,6 +257,14 @@ const PaymentSection = () => {
       setFormData({ ...formData, [name]: formatPhone(value) });
     } else if (name === "cpf") {
       setFormData({ ...formData, [name]: formatCPF(value) });
+    } else if (name === "cep") {
+      const formattedCEP = formatCEP(value);
+      setFormData({ ...formData, [name]: formattedCEP });
+
+      // Buscar CEP automaticamente quando completar 8 dígitos
+      if (value.replace(/\D/g, "").length === 8) {
+        fetchCEP(value);
+      }
     } else {
       setFormData({ ...formData, [name]: value });
     }
@@ -193,19 +280,42 @@ const PaymentSection = () => {
     phone: touched.phone && !validatePhone(formData.phone) ? "Telefone inválido" : null,
     cpf: touched.cpf && !validateCPF(formData.cpf) ? "CPF deve ter 11 dígitos" : null,
     email: touched.email && !validateEmail(formData.email) ? "E-mail inválido" : null,
+    cep: touched.cep && !validateCEP(formData.cep) ? "CEP deve ter 8 dígitos" : null,
+    street: touched.street && formData.street.length < 3 ? "Rua inválida" : null,
+    number: touched.number && formData.number.length < 1 ? "Número obrigatório" : null,
+    neighborhood: touched.neighborhood && formData.neighborhood.length < 2 ? "Bairro inválido" : null,
+    city: touched.city && formData.city.length < 2 ? "Cidade inválida" : null,
+    state: touched.state && formData.state.length !== 2 ? "Estado inválido" : null,
   };
 
   const isFormValid =
     formData.name.length >= 3 &&
     validatePhone(formData.phone) &&
     validateCPF(formData.cpf) &&
-    validateEmail(formData.email);
+    validateEmail(formData.email) &&
+    validateCEP(formData.cep) &&
+    formData.street.length >= 3 &&
+    formData.number.length >= 1 &&
+    formData.neighborhood.length >= 2 &&
+    formData.city.length >= 2 &&
+    formData.state.length === 2;
 
   const handleContinueToPayment = (e: React.FormEvent) => {
     e.preventDefault();
 
     // Marca todos como touched para mostrar erros
-    setTouched({ name: true, phone: true, cpf: true, email: true });
+    setTouched({
+      name: true,
+      phone: true,
+      cpf: true,
+      email: true,
+      cep: true,
+      street: true,
+      number: true,
+      neighborhood: true,
+      city: true,
+      state: true,
+    });
 
     if (!isFormValid) {
       toast({
@@ -291,6 +401,33 @@ const PaymentSection = () => {
                     )}
                   </div>
 
+                  {/* Email */}
+                  <div>
+                    <Label htmlFor="email" className="text-foreground font-medium text-sm sm:text-base">
+                      E-mail *
+                    </Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={formData.email}
+                      onChange={handleChange}
+                      onBlur={() => handleBlur("email")}
+                      className={cn(
+                        "mt-1.5 sm:mt-2 h-11 sm:h-12 text-base",
+                        errors.email && "border-destructive focus-visible:ring-destructive"
+                      )}
+                      maxLength={255}
+                    />
+                    {errors.email && (
+                      <p className="text-destructive text-xs sm:text-sm mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {errors.email}
+                      </p>
+                    )}
+                  </div>
+
                   {/* Telefone e CPF */}
                   <div className="grid sm:grid-cols-2 gap-4 sm:gap-5">
                     <div>
@@ -345,31 +482,193 @@ const PaymentSection = () => {
                     </div>
                   </div>
 
-                  {/* Email */}
-                  <div>
-                    <Label htmlFor="email" className="text-foreground font-medium text-sm sm:text-base">
-                      E-mail *
-                    </Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={formData.email}
-                      onChange={handleChange}
-                      onBlur={() => handleBlur("email")}
-                      className={cn(
-                        "mt-1.5 sm:mt-2 h-11 sm:h-12 text-base",
-                        errors.email && "border-destructive focus-visible:ring-destructive"
+                  {/* Separator Endereço */}
+                  <div className="flex items-center gap-3 pt-2">
+                    <MapPin className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">Endereço</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+
+                  {/* CEP */}
+                  <div className="grid sm:grid-cols-3 gap-4 sm:gap-5">
+                    <div>
+                      <Label htmlFor="cep" className="text-foreground font-medium text-sm sm:text-base">
+                        CEP *
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          id="cep"
+                          name="cep"
+                          type="text"
+                          placeholder="00000-000"
+                          value={formData.cep}
+                          onChange={handleChange}
+                          onBlur={() => handleBlur("cep")}
+                          className={cn(
+                            "mt-1.5 sm:mt-2 h-11 sm:h-12 text-base pr-10",
+                            errors.cep && "border-destructive focus-visible:ring-destructive"
+                          )}
+                          maxLength={9}
+                        />
+                        {isLoadingCEP && (
+                          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 mt-1 w-4 h-4 animate-spin text-primary" />
+                        )}
+                      </div>
+                      {errors.cep && (
+                        <p className="text-destructive text-xs sm:text-sm mt-1 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {errors.cep}
+                        </p>
                       )}
-                      maxLength={255}
-                    />
-                    {errors.email && (
-                      <p className="text-destructive text-xs sm:text-sm mt-1 flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        {errors.email}
-                      </p>
-                    )}
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label htmlFor="street" className="text-foreground font-medium text-sm sm:text-base">
+                        Rua *
+                      </Label>
+                      <Input
+                        id="street"
+                        name="street"
+                        type="text"
+                        placeholder="Nome da rua"
+                        value={formData.street}
+                        onChange={handleChange}
+                        onBlur={() => handleBlur("street")}
+                        className={cn(
+                          "mt-1.5 sm:mt-2 h-11 sm:h-12 text-base",
+                          errors.street && "border-destructive focus-visible:ring-destructive"
+                        )}
+                        maxLength={200}
+                      />
+                      {errors.street && (
+                        <p className="text-destructive text-xs sm:text-sm mt-1 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {errors.street}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Número, Complemento, Bairro */}
+                  <div className="grid sm:grid-cols-3 gap-4 sm:gap-5">
+                    <div>
+                      <Label htmlFor="number" className="text-foreground font-medium text-sm sm:text-base">
+                        Número *
+                      </Label>
+                      <Input
+                        id="number"
+                        name="number"
+                        type="text"
+                        placeholder="123"
+                        value={formData.number}
+                        onChange={handleChange}
+                        onBlur={() => handleBlur("number")}
+                        className={cn(
+                          "mt-1.5 sm:mt-2 h-11 sm:h-12 text-base",
+                          errors.number && "border-destructive focus-visible:ring-destructive"
+                        )}
+                        maxLength={10}
+                      />
+                      {errors.number && (
+                        <p className="text-destructive text-xs sm:text-sm mt-1 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {errors.number}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="complement" className="text-foreground font-medium text-sm sm:text-base">
+                        Complemento
+                      </Label>
+                      <Input
+                        id="complement"
+                        name="complement"
+                        type="text"
+                        placeholder="Apto, Bloco..."
+                        value={formData.complement}
+                        onChange={handleChange}
+                        className="mt-1.5 sm:mt-2 h-11 sm:h-12 text-base"
+                        maxLength={100}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="neighborhood" className="text-foreground font-medium text-sm sm:text-base">
+                        Bairro *
+                      </Label>
+                      <Input
+                        id="neighborhood"
+                        name="neighborhood"
+                        type="text"
+                        placeholder="Bairro"
+                        value={formData.neighborhood}
+                        onChange={handleChange}
+                        onBlur={() => handleBlur("neighborhood")}
+                        className={cn(
+                          "mt-1.5 sm:mt-2 h-11 sm:h-12 text-base",
+                          errors.neighborhood && "border-destructive focus-visible:ring-destructive"
+                        )}
+                        maxLength={100}
+                      />
+                      {errors.neighborhood && (
+                        <p className="text-destructive text-xs sm:text-sm mt-1 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {errors.neighborhood}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Cidade e Estado */}
+                  <div className="grid sm:grid-cols-3 gap-4 sm:gap-5">
+                    <div className="sm:col-span-2">
+                      <Label htmlFor="city" className="text-foreground font-medium text-sm sm:text-base">
+                        Cidade *
+                      </Label>
+                      <Input
+                        id="city"
+                        name="city"
+                        type="text"
+                        placeholder="Cidade"
+                        value={formData.city}
+                        onChange={handleChange}
+                        onBlur={() => handleBlur("city")}
+                        className={cn(
+                          "mt-1.5 sm:mt-2 h-11 sm:h-12 text-base",
+                          errors.city && "border-destructive focus-visible:ring-destructive"
+                        )}
+                        maxLength={100}
+                      />
+                      {errors.city && (
+                        <p className="text-destructive text-xs sm:text-sm mt-1 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {errors.city}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <Label htmlFor="state" className="text-foreground font-medium text-sm sm:text-base">
+                        Estado *
+                      </Label>
+                      <Input
+                        id="state"
+                        name="state"
+                        type="text"
+                        placeholder="UF"
+                        value={formData.state}
+                        onChange={handleChange}
+                        onBlur={() => handleBlur("state")}
+                        className={cn(
+                          "mt-1.5 sm:mt-2 h-11 sm:h-12 text-base uppercase",
+                          errors.state && "border-destructive focus-visible:ring-destructive"
+                        )}
+                        maxLength={2}
+                      />
+                      {errors.state && (
+                        <p className="text-destructive text-xs sm:text-sm mt-1 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {errors.state}
+                        </p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Seleção de Método de Pagamento */}
@@ -466,6 +765,9 @@ const PaymentSection = () => {
                         <p className="text-xs text-muted-foreground mb-0.5">Pagador</p>
                         <p className="font-medium text-sm sm:text-base truncate">{formData.name}</p>
                         <p className="text-xs sm:text-sm text-muted-foreground truncate">{formData.email}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formData.street}, {formData.number} - {formData.city}/{formData.state}
+                        </p>
                       </div>
                       <Check className="w-5 h-5 text-success" />
                     </div>

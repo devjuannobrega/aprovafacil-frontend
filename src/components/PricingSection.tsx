@@ -1,76 +1,49 @@
 import { Button } from "@/components/ui/button";
 import { Check, MessageCircle, Zap, Clock, CreditCard } from "lucide-react";
 import { useChat } from "@/contexts/ChatContext";
-
-const products = [
-  {
-    name: "LIMPA NOME",
-    pricePF: 1500,
-    pricePJ: 1800,
-    description: "Remove apontamentos nos órgãos SERASA, SPC, SCPC, BOA VISTA e CENPROT através de ação jurídica coletiva.",
-    deliverables: [
-      "Exclusão de apontamentos",
-      "Regularização documental",
-      "Relatório oficial 'Nada Consta'",
-      "Suporte ativo",
-      "Garantia de 6 meses",
-    ],
-    deadline: "30 a 60 dias úteis",
-    deadlineNote: "80% dos casos entregues antes de 40 dias",
-    payment: "Entrada de R$ 750,00",
-  },
-  {
-    name: "RATING / RAIND",
-    pricePF: 2500,
-    pricePJ: 3000,
-    description: "Atualiza o rating bancário (classificação A a E), restaura Score e renda presumida, melhorando a análise interna dos bancos.",
-    deliverables: [
-      "Atualização de rating bancário",
-      "Atualização de renda presumida",
-      "Restauração da capacidade de pagamento",
-      "Correção de inconsistências internas",
-    ],
-    deadline: "30 dias úteis",
-    payment: "À vista ou 50% + 50%",
-  },
-  {
-    name: "SCORE",
-    pricePF: 800,
-    pricePJ: 1000,
-    description: "Serviço especializado para recuperação e aumento do Score de crédito junto aos birôs de proteção ao crédito.",
-    deliverables: [
-      "Análise do perfil de crédito",
-      "Estratégias de recuperação",
-      "Acompanhamento da evolução",
-      "Relatório de progresso",
-    ],
-    deadline: "Consultar",
-    payment: "Consultar condições",
-  },
-  {
-    name: "ESCAVADOR / JUSBRASIL",
-    pricePF: 1250,
-    pricePJ: 1500,
-    description: "Limpa apontamentos no Google/Escavador e realiza levantamento completo de ações judiciais.",
-    deliverables: [
-      "Retirada de apontamentos do Google/Escavador",
-      "Limpeza de informações constrangedoras",
-      "Mapeamento jurídico completo",
-      "Relatório técnico para bancos",
-    ],
-    deadline: "15 a 30 dias úteis",
-    payment: "Consultar condições",
-  },
-];
+import { useCart, PRODUCTS, PersonType } from "@/contexts/CartContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 const PricingSection = () => {
   const { openChat } = useChat();
+  const { setSelectedProduct, setPersonType } = useCart();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const scrollToPayment = () => {
-    const element = document.getElementById("pagamento");
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
+  // Estado local para tipo de pessoa por produto (para exibição)
+  const [personTypes, setPersonTypes] = useState<Record<string, PersonType>>(
+    PRODUCTS.reduce((acc, p) => ({ ...acc, [p.id]: "PF" }), {})
+  );
+
+  const handlePersonTypeChange = (productId: string, type: PersonType) => {
+    setPersonTypes((prev) => ({ ...prev, [productId]: type }));
+  };
+
+  const handleSelectProduct = (productId: string) => {
+    const product = PRODUCTS.find((p) => p.id === productId);
+    if (!product) return;
+
+    // Verificar se está logado
+    if (!isAuthenticated) {
+      toast({
+        title: "Faça login para continuar",
+        description: "Você precisa estar logado para contratar um serviço.",
+      });
+      navigate("/login");
+      return;
     }
+
+    // Selecionar produto e tipo de pessoa
+    setSelectedProduct(product);
+    setPersonType(personTypes[productId]);
+
+    // Ir para checkout
+    navigate("/checkout");
   };
 
   return (
@@ -101,9 +74,9 @@ const PricingSection = () => {
 
         {/* Products Grid */}
         <div className="grid md:grid-cols-2 gap-6 max-w-6xl mx-auto">
-          {products.map((product, index) => (
+          {PRODUCTS.map((product) => (
             <div
-              key={index}
+              key={product.id}
               className="bg-card rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 flex flex-col h-full"
             >
               <div className="p-5 sm:p-6 md:p-8 flex flex-col flex-1">
@@ -112,24 +85,37 @@ const PricingSection = () => {
                   {product.name}
                 </h3>
 
-                {/* Prices */}
-                <div className="flex gap-4 mb-4">
-                  <div className="flex-1 bg-primary/5 rounded-xl p-3 text-center">
-                    <span className="text-xs text-muted-foreground uppercase tracking-wide block mb-1">
-                      Pessoa Física
-                    </span>
-                    <span className="font-poppins font-bold text-2xl sm:text-3xl text-foreground">
-                      R$ {product.pricePF.toLocaleString('pt-BR')}
-                    </span>
-                  </div>
-                  <div className="flex-1 bg-primary/5 rounded-xl p-3 text-center">
-                    <span className="text-xs text-muted-foreground uppercase tracking-wide block mb-1">
-                      Pessoa Jurídica
-                    </span>
-                    <span className="font-poppins font-bold text-2xl sm:text-3xl text-foreground">
-                      R$ {product.pricePJ.toLocaleString('pt-BR')}
-                    </span>
-                  </div>
+                {/* Person Type Toggle */}
+                <div className="flex gap-2 mb-4">
+                  <button
+                    onClick={() => handlePersonTypeChange(product.id, "PF")}
+                    className={cn(
+                      "flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all",
+                      personTypes[product.id] === "PF"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    Pessoa Física
+                  </button>
+                  <button
+                    onClick={() => handlePersonTypeChange(product.id, "PJ")}
+                    className={cn(
+                      "flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all",
+                      personTypes[product.id] === "PJ"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    Pessoa Jurídica
+                  </button>
+                </div>
+
+                {/* Price */}
+                <div className="bg-primary/5 rounded-xl p-4 text-center mb-4">
+                  <span className="font-poppins font-bold text-3xl sm:text-4xl text-foreground">
+                    R$ {(personTypes[product.id] === "PF" ? product.pricePF : product.pricePJ).toLocaleString('pt-BR')}
+                  </span>
                 </div>
 
                 {/* Description */}
@@ -172,7 +158,7 @@ const PricingSection = () => {
                     variant="cta"
                     size="lg"
                     className="flex-1 text-sm"
-                    onClick={scrollToPayment}
+                    onClick={() => handleSelectProduct(product.id)}
                   >
                     Contratar
                   </Button>
